@@ -51,18 +51,8 @@
     /* force every dropped image into cohesive black & white */
     filter:grayscale(1) contrast(1.06) brightness(.92);
   }
-
-  /* placeholder portrait (used until you drop in real images) */
-  .ph{width:100%;height:100%;position:relative;background:#111;}
-  .ph svg{width:100%;height:100%;display:block;}
-  .ph .tag{
-    position:absolute;left:50%;bottom:10%;transform:translateX(-50%);
-    font-family:'Barlow Semi Condensed',sans-serif;
-    text-transform:uppercase;letter-spacing:.34em;
-    font-size:clamp(11px,1.4vw,15px);color:var(--paper-dim);
-    text-align:center;white-space:nowrap;
-  }
-  .ph .tag b{color:var(--gold);font-weight:600;letter-spacing:.4em;}
+  /* stacked layer used to cross-fade between chapter backgrounds */
+  .frame img.xfade{position:absolute;inset:0;}
 
   /* cinematic finish over the whole reel */
   .vignette{position:absolute;inset:0;pointer-events:none;
@@ -218,6 +208,35 @@
   @media (prefers-reduced-motion:reduce){
     .frame{transition:none;}
   }
+
+  /* ---------------- CUSTOM CURSOR (white-outline sword/pen) ----------------
+     Uses mix-blend-mode:difference so the white art reads black-and-white
+     against any background. No filters (they caused per-frame lag). */
+  .cursor{
+    position:fixed;left:0;top:0;z-index:9999;display:none;pointer-events:none;
+    width:30px;height:30px;
+    transform:translate3d(-100px,-100px,0);will-change:transform;
+    mix-blend-mode:difference;
+  }
+  .cursor-inner{position:absolute;inset:0;transform-origin:18% 18%;}
+  .cursor .ic{position:absolute;inset:0;width:100%;height:100%;}
+  .cursor .pen{opacity:0;}
+  .cursor-inner.show-pen .sword{opacity:0;}
+  .cursor-inner.show-pen .pen{opacity:1;}
+  @keyframes cursor-swap{
+    0%{transform:scale(1) rotate(0deg);}
+    45%{transform:scale(.18) rotate(170deg);}
+    55%{transform:scale(.18) rotate(190deg);}
+    100%{transform:scale(1) rotate(360deg);}
+  }
+  .cursor-inner.swap{animation:cursor-swap .34s cubic-bezier(.5,0,.3,1);}
+  @media (hover:hover) and (pointer:fine){
+    *{cursor:none !important;}
+    .cursor{display:block;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .cursor-inner.swap{animation:none;}
+  }
 </style>
 </head>
 <body>
@@ -285,10 +304,10 @@
         </ul>
       </div>
       <div class="mark tr"><span id="tr-region">Sawtelle · West L.A.</span><span class="co" id="tr-coords">34.03° N · 118.45° W</span></div>
-      <div class="mark bl">Est. 2020</div>
+      <div class="mark bl" id="estMark">Est. 2025</div>
 
       <div class="enter">
-        <a href="mailto:membership@tycoons.club?subject=Membership%20Inquiry" id="cta">Membership Inquiry <span class="arrow" aria-hidden="true">&rarr;</span></a>
+        <a href="mailto:membership@tycoons.club?subject=Tycoons%20Club%20West%20Membership%20Inquiry" id="cta">Membership Inquiry <span class="arrow" aria-hidden="true">&rarr;</span></a>
       </div>
 
       <div class="wordmark">
@@ -306,18 +325,35 @@
     </div>
   </main>
 
+  <!-- custom cursor: white-outline sword by default, toggles to a quill on each click -->
+  <div class="cursor" id="cursor" aria-hidden="true">
+    <div class="cursor-inner" id="cursorInner">
+      <svg class="ic sword" viewBox="0 0 28 28" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 5 L16 14 L14 16 Z"/>      <!-- blade outline -->
+        <path d="M11.5 17 L18 10.5"/>          <!-- crossguard -->
+        <path d="M14.5 14.5 L20 20"/>          <!-- grip -->
+        <circle cx="21" cy="21" r="1.8"/>      <!-- pommel -->
+      </svg>
+      <!-- feather pen (Noun Project, reoriented so the nib sits at the hotspot) -->
+      <svg class="ic pen" viewBox="0 0 28 28" fill="none">
+        <g transform="matrix(-0.05178 0.22256 -0.22256 -0.05178 27.6077 5.8958)" fill="#fff">
+          <path d="m81.441 6.3984c-0.011718-0.20703-0.042968-0.39844-0.082031-0.59766-0.14844-0.82812-0.60156-1.6016-1.2617-2.1484-0.62891-0.55078-1.4492-0.89062-2.3203-0.96094-0.10156-0.011718-0.19141-0.011718-0.30078-0.011718-1.5703 0-6.9805 0.078124-10.441 1.1406-2.9883 0.92188-4.2188 4.4805-4.6719 6.3516 0.070313-1.9805 0.98047-4.9805 0.98828-5.0195l0.078126-0.26953-0.26953 0.058594c-6.2695 1.4492-13.672 7.7617-17.211 14.68-2.6211 5.1211-2.4805 11.359-2.3008 13.762-0.60938-1.8594-1.4805-6.0117-1.9297-8.2188-0.14062-0.67187-0.25-1.2109-0.32031-1.5391-0.44141-1.8906-1.4219-1.8281-1.4609-1.8281l-0.12891 0.011719-0.019532 0.12891c-0.32812 2.5391-6.3281 13.941-6.3906 14.051l-5.5586 9.4297c-2.4219 4.1094-3.9688 8.4102-4.6094 12.789-0.17188 1.1719-0.26172 2.2188-0.28906 3.2188-0.12891 4.2695 1.3984 7.3789 2.1797 8.6797-2.9102-2.1602-4.5312-6.8789-4.5508-6.9297l-0.17969-0.53906-0.12891 0.55859c-1.7812 7.7188 2.4219 17.141 2.8281 18.031-1.3203 3.1094-4.3906 15.422-4.4219 15.539l-0.14062 0.55859 0.41016-0.41016 0.46875-0.55859 0.089844-0.011719v-0.10156l5.6484-6.7812 0.37109-1.9688 2.5898-8.7383 6.4688-16.109 6-12.719s7.6094-13.449 8.6602-15.309c1.0391-1.8281 10.59-14.039 10.68-14.148l4.6797-4.9414c1.7812-1.8789 3.7812-3.5391 5.9492-4.9492l1.7305-1.1289c-0.011719 0.011719-0.03125 0.019531-0.039063 0.039062-0.21094 0.17969-0.42188 0.35938-0.62891 0.53125-0.039063 0.03125-0.070313 0.058594-0.10156 0.078125-0.21875 0.17969-0.42969 0.33984-0.62109 0.48047-0.89062 0.64062-4.1914 4.0195-6.1484 6.0508-0.55859 0.57031-1 1.0312-1.2383 1.2695-1.0508 1.0508-7.5898 9.8516-7.8789 10.238 0 0-8.0312 13.051-9.4805 15.398-0.87891 1.4219-3.9219 8.0117-6.3594 13.309-1.6289 3.5391-3.0391 6.5898-3.4609 7.3594-0.44922 0.82812-1.6719 4.1406-3.7109 10.121-1.3398 3.9219-2.5312 7.5391-2.5391 7.5781l-0.039062 0.12891 0.12891 0.058594c0.23828 0.12109 0.51172 0.19141 0.83984 0.23047 0.12109 0.011719 0.25 0.019532 0.37109 0.019532 0.66016 0 1.3516-0.17188 1.8398-0.32812 0.75-0.23047 1.4883-0.60156 2.3906-1.1797 4.6211-3.0195 10.199-2.6094 10.262-2.6211l0.12109 0.011718 0.10938-0.26172-0.039063-0.070313c-1.6406-2.6992-5.2891-3.4688-6.6719-3.6719 1.0781-0.55078 3.7812-1.9219 5.9219-3 0.55859-0.26953 1.1211-0.64062 1.7305-1.1289 1.7891-1.4297 3.2305-3.4492 4.2812-5.9805 0.53125-1.2695 1.1797-2.6211 1.9297-3.9883l2.8711-7.1602-6.3086 0.78125c1.7617-0.92969 5.1094-3.0117 7.9102-4.8516 0.85938-0.55859 1.7617-1.1602 2.6914-1.7891l8.4492-10.141-0.57031 0.21094c-1.4805 0.55078-4.2305 0.71875-6.3203 0.76953l0.078125-0.21094c0.03125-0.011719 0.058593-0.011719 0.10156-0.019531l0.19922-0.03125c0.62891-0.10156 1.4609-0.35938 2.6211-0.83984 3.4688-1.4414 6.6016-3.5781 9.3008-6.3906 0.46094-0.48047 0.76172-0.82031 0.98047-1.1016 0.39844-0.51953 0.89062-1.4219 1.2188-2.0898 1.3906-2.7812 2.4883-5.8281 3.2617-9.0703l1.3086-5.5312c0.023438-0.15625 0.56641-4.2344 0.40625-6.2578z"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+
 <script>
 /* =========================================================================
    THE ROSTER  — oldest first; the reel accelerates as it moves toward today.
-   Replace `img` with a URL/path to a real black-and-white portrait.
-   Leave img:null to use the built-in placeholder portrait.
+   Each `img` is a path to a black-and-white portrait.
    The final FOUNDERS entry is the payoff frame and holds at the end.
    ========================================================================= */
 /* name/era are reference labels only — they are NOT displayed (nameless reel).
    They tell you which slot is whom when you drop in each portrait. */
 const ROSTER = [
   { name:"Andrew Carnegie",     era:"1835", img:"images/Andrew-Carnegie.png" },
-  { name:"John D. Rockefeller", era:"1839", img:"images/John-Rockefeller.png" },
+  { name:"John D. Rockefeller", era:"1839", img:"images/JohnD-Rockefeller.png" },
   { name:"Henry Ford",          era:"1863", img:"images/Henry-Ford.png" },
   { name:"J. Paul Getty",       era:"1892", img:"images/JPaul-Getty.png" },
   { name:"Walt Disney",         era:"1901", img:"images/Walt-Disney.png" },
@@ -332,10 +368,10 @@ const ROSTER = [
   { name:"Mukesh Ambani",       era:"1957", img:"images/Mukesh-Ambani.png" },
   { name:"Jeff Bezos",          era:"1964", img:"images/Jeff-Bezos.png" },
   { name:"Roman Abramovich",    era:"1966", img:"images/Roman-Abramovich.png" },
-  { name:"Elon Musk",           era:"1971", img:"images/Elon-Musk.png" },
-  { name:"Kim Kardashian",      era:"1980", img:"images/Kim-Kardashian.png" }
+  { name:"Kim Kardashian",      era:"1980", img:"images/Kim-Kardashian.png" },
+  { name:"Elon Musk",           era:"1981", img:"images/Elon-Musk.png" }
 ];
-/* The payoff frame: Kyle, Matt Devine, Francesca Bassa, Sam Kushel.
+/* The payoff frame: Kyle Dumovic, Mat Devine, Francesca Bassa, Sam Kushell.
    Give it a single composite, or extend buildFrame() to lay out 4 headshots. */
 const FOUNDERS = { name:"The Founders", era:"Tycoons Club West", img:"images/tycoons-west.png", founders:true };
 
@@ -344,18 +380,11 @@ const FOUNDERS = { name:"The Founders", era:"Tycoons Club West", img:"images/tyc
    Add more entries here and a matching <li> in #chapterMenu to grow the list.
    ========================================================================= */
 const CLUBS = {
-  west:      { label:"No. 002 — West", status:"Official Chapter", region:"Sawtelle · West L.A.",  coords:"34.03° N · 118.45° W", bg:"images/tycoons-west.png",      audio:"audio/rainy-afternoon-chords.mp3" },
-  hollywood: { label:"No. 001 — East", status:"Closed Chapter",   region:"Hollywood · East L.A.", coords:"34.10° N · 118.32° W", bg:"images/tycoons-hollywood.png", audio:"audio/nocturnal-windowpane.mp3" }
+  west:      { label:"No. 002 — West", status:"Official Chapter", region:"Sawtelle · West L.A.",  coords:"34.03° N · 118.45° W", est:"Est. 2025", mailto:"mailto:membership@tycoons.club?subject=Tycoons%20Club%20West%20Membership%20Inquiry", bg:"images/tycoons-west.png",      audio:"audio/rainy-afternoon-chords.mp3" },
+  hollywood: { label:"No. 001 — East", status:"Closed Chapter",   region:"Hollywood · East L.A.", coords:"34.10° N · 118.32° W", est:"Est. 2020", mailto:"mailto:membership@tycoons.club?subject=Tycoons%20Club%20East%20Membership%20Inquiry", bg:"images/tycoons-hollywood.png", audio:"audio/nocturnal-windowpane.mp3" }
 };
 let currentClub = 'west';
 FOUNDERS.img = CLUBS[currentClub].bg;
-
-/* a few silhouette shapes so the placeholders read as distinct portraits */
-const SILHOUETTES = [
-  "M50 24c12 0 21 11 21 25 0 10-4 17-9 21 14 4 27 16 31 34H7c4-18 17-30 31-34-5-4-9-11-9-21 0-14 9-25 21-25Z",
-  "M50 22c13 0 22 12 22 27 0 9-4 16-9 20 16 5 28 18 32 35H5c4-17 16-30 32-35-5-4-9-11-9-20 0-15 9-27 22-27Z",
-  "M50 26c11 0 20 10 20 23 0 11-5 19-11 22 13 5 25 17 28 33H13c3-16 15-28 28-33-6-3-11-11-11-22 0-13 9-23 20-23Z",
-];
 
 const reel = document.getElementById('reel');
 const chrome = document.getElementById('chrome');
@@ -365,35 +394,12 @@ const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function cssNum(v){ return parseFloat(getComputedStyle(document.documentElement).getPropertyValue(v)); }
 
-function placeholderHTML(entry, i){
-  const sil = SILHOUETTES[i % SILHOUETTES.length];
-  const sils = entry.founders
-    ? [12,37,62,87].map(x=>`<g transform="translate(${x-50},6) scale(.92)"><path d="${SILHOUETTES[(x)%3]}" fill="#cfc9bd"/></g>`).join('')
-    : `<path d="${sil}" fill="#d6d0c4"/>`;
-  return `
-    <div class="ph">
-      <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
-        <defs><radialGradient id="g${i}" cx="50%" cy="38%" r="70%">
-          <stop offset="0%" stop-color="#2a2a28"/><stop offset="100%" stop-color="#0e0e0d"/>
-        </radialGradient></defs>
-        <rect width="100" height="100" fill="url(#g${i})"/>
-        ${sils}
-      </svg>
-    </div>`;
-}
-
-function buildFrame(entry, i){
+function buildFrame(entry){
   const f = document.createElement('div');
   f.className = 'frame';
-  if (entry.img){
-    const img = document.createElement('img');
-    img.src = entry.img; img.alt = '';
-    // if the file is missing or misnamed, fall back to the silhouette
-    img.onerror = () => { f.innerHTML = placeholderHTML(entry, i); };
-    f.appendChild(img);
-  } else {
-    f.innerHTML = placeholderHTML(entry, i);
-  }
+  const img = document.createElement('img');
+  img.src = entry.img; img.alt = '';
+  f.appendChild(img);
   reel.appendChild(f);
   return f;
 }
@@ -414,7 +420,7 @@ function run(){
   skipBtn.classList.remove('gone');
 
   frames = ROSTER.map(buildFrame);
-  foundersFrame = buildFrame(FOUNDERS, 99);
+  foundersFrame = buildFrame(FOUNDERS);
 
   if (reduce){                        // reduced motion: skip straight to the payoff
     foundersFrame.classList.add('show');
@@ -486,6 +492,47 @@ const chapterStatus = document.getElementById('chapterStatus');
 const chapterLabel  = document.getElementById('chapterLabel');
 const trRegion      = document.getElementById('tr-region');
 const trCoords      = document.getElementById('tr-coords');
+const estMark       = document.getElementById('estMark');
+const cta           = document.getElementById('cta');
+
+const BG_FADE = 800;     // ms to cross-fade chapter background images
+const TXT_FADE = 280;    // ms to fade a corner label out, then back in
+
+// cross-fade the founders/background frame to a new image by stacking a fresh
+// <img> on top, fading it in, then removing the old one
+function crossfadeBg(frame, src){
+  const prev = frame.querySelector('img');
+  if (prev && prev.dataset.src === src) return;
+  const next = document.createElement('img');
+  next.alt = '';
+  next.className = 'xfade';
+  next.dataset.src = src;
+  next.style.opacity = '0';
+  next.style.transition = `opacity ${BG_FADE}ms ease`;
+  const reveal = () => {
+    void next.offsetWidth;            // force reflow so the transition runs
+    next.style.opacity = '1';
+    setTimeout(() => { if (prev && prev.parentNode) prev.remove(); }, BG_FADE + 60);
+  };
+  next.onload = reveal;
+  next.onerror = reveal;
+  frame.appendChild(next);
+  next.src = src;
+}
+
+// fade an element out, run update() at the low point, then fade it back in
+function fadeSwap(el, update){
+  if (!el) return;
+  el.style.transition = `opacity ${TXT_FADE}ms ease`;
+  el.style.opacity = '0';
+  setTimeout(() => { update(); el.style.opacity = '1'; }, TXT_FADE);
+}
+
+// fade a text node out, swap its content, fade it back in
+function fadeText(el, text){
+  if (!el || el.textContent === text) return;
+  fadeSwap(el, () => { el.textContent = text; });
+}
 
 function applyClub(key){
   const c = CLUBS[key];
@@ -493,18 +540,8 @@ function applyClub(key){
   currentClub = key;
   FOUNDERS.img = c.bg;
 
-  // swap the live background (the held founders frame), if it exists yet
-  if (foundersFrame){
-    let img = foundersFrame.querySelector('img');
-    if (!img){                       // a placeholder was showing — promote to a real image
-      foundersFrame.innerHTML = '';
-      img = document.createElement('img');
-      img.alt = '';
-      img.onerror = () => { foundersFrame.innerHTML = placeholderHTML(FOUNDERS, 99); };
-      foundersFrame.appendChild(img);
-    }
-    img.src = c.bg;
-  }
+  // cross-fade the live background (the held founders frame), if it exists yet
+  if (foundersFrame) crossfadeBg(foundersFrame, c.bg);
 
   // swap the looping soundtrack for this chapter (keeps playing + mute state)
   if (audio && c.audio && audio.dataset.track !== c.audio){
@@ -515,10 +552,14 @@ function applyClub(key){
     if (audioArmed) tryPlayAudio();
   }
 
-  chapterStatus.textContent = c.status;   // top-left status line
-  chapterLabel.textContent  = c.label;    // top-left selector label
-  trRegion.textContent      = c.region;   // top-right name
-  trCoords.textContent      = c.coords;   // top-right coordinates
+  fadeText(chapterStatus, c.status);      // top-left status line
+  fadeText(chapterLabel,  c.label);       // top-left selector label
+  fadeText(trRegion,      c.region);      // top-right name
+  fadeText(trCoords,      c.coords);      // top-right coordinates
+  fadeText(estMark,       c.est);         // bottom-left "Est." year
+  // bottom-right CTA: fade it (text is unchanged) while swapping the mailto subject
+  if (cta && cta.getAttribute('href') !== c.mailto)
+    fadeSwap(cta, () => cta.setAttribute('href', c.mailto));
 
   chapterMenu.querySelectorAll('[data-club]').forEach(li =>
     li.setAttribute('aria-selected', li.dataset.club === key ? 'true' : 'false'));
@@ -584,6 +625,32 @@ musicBtn.addEventListener('click', (e) => {
   audio.muted = !audio.muted;
   syncMusicIcon();
 });
+
+/* ---------------- CUSTOM CURSOR (sword <-> quill) ---------------- */
+const cursor = document.getElementById('cursor');
+const cursorInner = document.getElementById('cursorInner');
+const SWAP_MS = 340;
+const CURSOR_HOT = 5.4;       // px from box top-left to the icon tip (the hotspot)
+let cursorIsPen = false;
+
+// the icon IS the cursor: its tip tracks the pointer exactly
+document.addEventListener('mousemove', (e) => {
+  cursor.style.opacity = '1';
+  cursor.style.transform = `translate3d(${e.clientX - CURSOR_HOT}px, ${e.clientY - CURSOR_HOT}px, 0)`;
+});
+document.addEventListener('mouseleave', () => { cursor.style.opacity = '0'; });
+
+// each click spins/shrinks the cursor and swaps sword <-> quill at the midpoint
+document.addEventListener('mousedown', () => {
+  cursorInner.classList.remove('swap');
+  void cursorInner.offsetWidth;              // restart the animation
+  cursorInner.classList.add('swap');
+  setTimeout(() => {
+    cursorIsPen = !cursorIsPen;
+    cursorInner.classList.toggle('show-pen', cursorIsPen);
+  }, SWAP_MS * 0.5);
+});
+cursorInner.addEventListener('animationend', () => cursorInner.classList.remove('swap'));
 
 run();
 </script>
