@@ -77,7 +77,7 @@
   .chrome a,.chrome button{pointer-events:auto;}
 
   .crest{
-    position:absolute;top:max(28px,4vh);left:50%;transform:translateX(-50%);
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
     width:clamp(64px,8vw,104px);height:auto;color:var(--gold);
     filter:drop-shadow(0 2px 14px rgba(0,0,0,.6));
   }
@@ -112,6 +112,69 @@
   .mark.bl{bottom:max(26px,3.4vh);left:max(26px,3vw);}
   .mark .co{color:var(--gold);display:block;margin-top:.3em;letter-spacing:.2em;}
 
+  /* ---------------- CHAPTER SELECTOR (top-left dropdown) ---------------- */
+  .chapter{pointer-events:auto;}
+  .chapter .status{display:block;}
+  .chapter .select{
+    margin-top:.3em;
+    font-family:'Barlow Semi Condensed',sans-serif;
+    text-transform:uppercase;letter-spacing:.2em;
+    font-size:clamp(10px,1.2vw,13px);
+    color:var(--gold);background:none;border:none;padding:0;cursor:pointer;
+    display:inline-flex;align-items:center;gap:.5em;
+    transition:color .25s;
+  }
+  .chapter .select #chapterLabel{
+    text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1px;
+    text-decoration-color:var(--hair);transition:text-decoration-color .25s;
+  }
+  .chapter .select:hover,.chapter .select:focus-visible{
+    color:var(--paper);outline:none;
+  }
+  .chapter .select:hover #chapterLabel,
+  .chapter .select:focus-visible #chapterLabel{text-decoration-color:var(--gold);}
+  .chapter .dn{display:inline-block;text-decoration:none;transition:transform .3s ease;}
+  .chapter:hover .dn,
+  .chapter .select[aria-expanded="true"] .dn{transform:translateX(5px);}
+
+  .chapter .menu{
+    position:absolute;top:100%;left:0;margin-top:10px;min-width:max(178px,100%);
+    list-style:none;background:rgba(10,9,8,.94);border:1px solid var(--hair);
+    box-shadow:0 18px 40px rgba(0,0,0,.55);
+    opacity:0;transform:translateY(-6px);pointer-events:none;
+    transition:opacity .25s ease,transform .25s ease;z-index:20;
+  }
+  .chapter .menu::before{   /* invisible bridge so hover survives the gap */
+    content:"";position:absolute;top:-10px;left:0;right:0;height:10px;
+  }
+  .chapter:hover .menu,.chapter.open .menu{
+    opacity:1;transform:translateY(0);pointer-events:auto;
+  }
+  .chapter .menu li{
+    font-family:'Barlow Semi Condensed',sans-serif;text-transform:uppercase;
+    letter-spacing:.2em;font-size:clamp(10px,1.2vw,13px);
+    color:var(--paper-dim);padding:.85em 1.2em;cursor:pointer;white-space:nowrap;
+    border-bottom:1px solid rgba(176,137,79,.14);
+    transition:color .2s,background .2s;
+  }
+  .chapter .menu li:last-child{border-bottom:none;}
+  .chapter .menu li:hover{color:var(--paper);background:rgba(176,137,79,.1);}
+  .chapter .menu li[aria-selected="true"]{color:var(--gold);}
+
+  /* ---------------- MUSIC TOGGLE ---------------- */
+  .music{
+    position:absolute;top:50%;right:max(20px,2.4vw);transform:translateY(-50%);
+    width:clamp(36px,4vw,44px);height:clamp(36px,4vw,44px);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--paper-dim);background:rgba(10,9,8,.35);border:1px solid var(--hair);
+    cursor:pointer;transition:color .25s,border-color .25s,background .25s;
+  }
+  .music:hover,.music:focus-visible{color:var(--gold);border-color:var(--gold);outline:none;}
+  .music svg{width:56%;height:56%;}
+  .music .slash{opacity:0;transition:opacity .2s;}
+  .music.muted{color:var(--paper-dim);}
+  .music.muted .slash{opacity:1;}
+
   /* membership easter-egg + CTA, bottom-right */
   .enter{
     position:absolute;bottom:max(26px,3.4vh);right:max(26px,3vw);
@@ -123,11 +186,22 @@
     margin-bottom:.55em;opacity:.85;
   }
   .enter a{
-    font-family:'Cormorant',serif;font-style:italic;font-size:clamp(17px,2.3vw,24px);
-    color:var(--paper);text-decoration:none;border-bottom:1px solid var(--hair);
-    padding-bottom:2px;transition:border-color .3s,color .3s;
+    font-family:'Barlow Semi Condensed',sans-serif;font-style:normal;
+    text-transform:uppercase;letter-spacing:.14em;
+    font-size:clamp(10px,1.2vw,13px);
+    color:var(--paper-dim);opacity:.82;
+    text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1px;
+    text-decoration-color:var(--hair);
+    transition:color .3s,opacity .3s,text-decoration-color .3s;
   }
-  .enter a:hover,.enter a:focus-visible{color:var(--gold);border-color:var(--gold);outline:none;}
+  .enter a:hover,.enter a:focus-visible{
+    color:#fff;opacity:1;text-decoration-color:#fff;outline:none;
+  }
+  .enter a .arrow{
+    display:inline-block;text-decoration:none;
+    transition:transform .3s ease;
+  }
+  .enter a:hover .arrow,.enter a:focus-visible .arrow{transform:translateX(5px);}
 
   /* skip / replay controls */
   .ctrl{position:absolute;z-index:5;font-family:'Barlow Semi Condensed',sans-serif;
@@ -151,6 +225,8 @@
     <div class="reel" id="reel" aria-hidden="true"></div>
     <div class="vignette"></div>
     <div class="grain"></div>
+
+    <audio id="bgAudio" loop preload="auto"></audio>
 
     <button id="skip" class="ctrl" aria-label="Skip intro">Skip</button>
     <button id="replay" class="ctrl" aria-label="Replay intro">↻ Replay</button>
@@ -197,18 +273,36 @@
         </g>
       </svg>
 
-      <div class="mark tl">Official Chapter<span class="co">No. 001 — West</span></div>
-      <div class="mark tr">Sawtelle · West L.A.<span class="co">34.03° N · 118.45° W</span></div>
-      <div class="mark bl">Est. MMXXV<span class="co">Whiskey · Music · Talk</span></div>
+      <div class="mark tl chapter" id="chapter">
+        <span class="status" id="chapterStatus">Official Chapter</span>
+        <button class="co select" id="chapterSelect" aria-haspopup="listbox" aria-expanded="false">
+          <span id="chapterLabel">No. 002 — West</span>
+          <span class="dn" aria-hidden="true">→</span>
+        </button>
+        <ul class="menu" id="chapterMenu" role="listbox" aria-label="Select a Tycoons Club chapter">
+          <li role="option" data-club="west" aria-selected="true">No. 002 — West</li>
+          <li role="option" data-club="hollywood" aria-selected="false">No. 001 — Hollywood</li>
+        </ul>
+      </div>
+      <div class="mark tr"><span id="tr-region">Sawtelle · West L.A.</span><span class="co" id="tr-coords">34.03° N · 118.45° W</span></div>
+      <div class="mark bl">Est. 2020</div>
 
       <div class="enter">
-        <div class="member">Membership confirmed</div>
-        <a href="#" id="cta">Find out more</a>
+        <a href="mailto:membership@tycoons.club?subject=Membership%20Inquiry" id="cta">Membership Inquiry <span class="arrow" aria-hidden="true">&rarr;</span></a>
       </div>
 
       <div class="wordmark">
         <h1><span class="the">The</span><span class="big">Tycoons</span><span class="club">Club</span></h1>
       </div>
+
+      <button id="music" class="music" aria-label="Mute music" aria-pressed="false" title="Mute music">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 17V5l10-2v12"/>
+          <circle cx="6.5" cy="17.5" r="2.5"/>
+          <circle cx="16.5" cy="15.5" r="2.5"/>
+          <line class="slash" x1="3.5" y1="3.5" x2="20.5" y2="20.5"/>
+        </svg>
+      </button>
     </div>
   </main>
 
@@ -243,7 +337,18 @@ const ROSTER = [
 ];
 /* The payoff frame: Kyle, Matt Devine, Francesca Bassa, Sam Kushel.
    Give it a single composite, or extend buildFrame() to lay out 4 headshots. */
-const FOUNDERS = { name:"The Founders", era:"Tycoons Club West", img:"images/current-tycoons.png", founders:true };
+const FOUNDERS = { name:"The Founders", era:"Tycoons Club West", img:"images/tycoons-west.png", founders:true };
+
+/* =========================================================================
+   CHAPTERS — each option swaps the background image plus the corner labels.
+   Add more entries here and a matching <li> in #chapterMenu to grow the list.
+   ========================================================================= */
+const CLUBS = {
+  west:      { label:"No. 002 — West", status:"Official Chapter", region:"Sawtelle · West L.A.",  coords:"34.03° N · 118.45° W", bg:"images/tycoons-west.png",      audio:"audio/rainy-afternoon-chords.mp3" },
+  hollywood: { label:"No. 001 — East", status:"Closed Chapter",   region:"Hollywood · East L.A.", coords:"34.10° N · 118.32° W", bg:"images/tycoons-hollywood.png", audio:"audio/nocturnal-windowpane.mp3" }
+};
+let currentClub = 'west';
+FOUNDERS.img = CLUBS[currentClub].bg;
 
 /* a few silhouette shapes so the placeholders read as distinct portraits */
 const SILHOUETTES = [
@@ -293,7 +398,7 @@ function buildFrame(entry, i){
   return f;
 }
 
-let frames = [], timers = [];
+let frames = [], timers = [], foundersFrame = null;
 function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
 
 function gapFor(progress){            // progress 0→1 across the historical roster
@@ -309,13 +414,14 @@ function run(){
   skipBtn.classList.remove('gone');
 
   frames = ROSTER.map(buildFrame);
-  const foundersFrame = buildFrame(FOUNDERS, 99);
+  foundersFrame = buildFrame(FOUNDERS, 99);
 
   if (reduce){                        // reduced motion: skip straight to the payoff
     foundersFrame.classList.add('show');
     chrome.classList.add('in');
     skipBtn.classList.add('gone');
     replayBtn.classList.add('in');
+    startBackgroundAudio();
     return;
   }
 
@@ -341,6 +447,7 @@ function run(){
   timers.push(setTimeout(() => {
     chrome.classList.add('in');
     replayBtn.classList.add('in');
+    startBackgroundAudio();
   }, t + 120 + fade * 0.7));
 }
 
@@ -348,7 +455,7 @@ function skipToEnd(){
   clearTimers();
   run.reduceOnce = true;
 }
-skipBtn.addEventListener('click', () => {
+function jumpToEnd(){
   clearTimers();
   reel.querySelectorAll('.frame').forEach(x => x.classList.remove('show'));
   const last = reel.lastElementChild;
@@ -356,8 +463,127 @@ skipBtn.addEventListener('click', () => {
   chrome.classList.add('in');
   skipBtn.classList.add('gone');
   replayBtn.classList.add('in');
-});
+  startBackgroundAudio();
+}
+skipBtn.addEventListener('click', jumpToEnd);
 replayBtn.addEventListener('click', run);
+
+// space bar skips the intro straight to the payoff (only while it's still running)
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' || e.key === ' '){
+    if (!skipBtn.classList.contains('gone')){
+      e.preventDefault();
+      jumpToEnd();
+    }
+  }
+});
+
+/* ---------------- CHAPTER SELECTOR ---------------- */
+const chapterEl     = document.getElementById('chapter');
+const chapterSelect = document.getElementById('chapterSelect');
+const chapterMenu   = document.getElementById('chapterMenu');
+const chapterStatus = document.getElementById('chapterStatus');
+const chapterLabel  = document.getElementById('chapterLabel');
+const trRegion      = document.getElementById('tr-region');
+const trCoords      = document.getElementById('tr-coords');
+
+function applyClub(key){
+  const c = CLUBS[key];
+  if (!c) return;
+  currentClub = key;
+  FOUNDERS.img = c.bg;
+
+  // swap the live background (the held founders frame), if it exists yet
+  if (foundersFrame){
+    let img = foundersFrame.querySelector('img');
+    if (!img){                       // a placeholder was showing — promote to a real image
+      foundersFrame.innerHTML = '';
+      img = document.createElement('img');
+      img.alt = '';
+      img.onerror = () => { foundersFrame.innerHTML = placeholderHTML(FOUNDERS, 99); };
+      foundersFrame.appendChild(img);
+    }
+    img.src = c.bg;
+  }
+
+  // swap the looping soundtrack for this chapter (keeps playing + mute state)
+  if (audio && c.audio && audio.dataset.track !== c.audio){
+    const wasMuted = audio.muted;
+    audio.src = c.audio;
+    audio.dataset.track = c.audio;
+    audio.muted = wasMuted;
+    if (audioArmed) tryPlayAudio();
+  }
+
+  chapterStatus.textContent = c.status;   // top-left status line
+  chapterLabel.textContent  = c.label;    // top-left selector label
+  trRegion.textContent      = c.region;   // top-right name
+  trCoords.textContent      = c.coords;   // top-right coordinates
+
+  chapterMenu.querySelectorAll('[data-club]').forEach(li =>
+    li.setAttribute('aria-selected', li.dataset.club === key ? 'true' : 'false'));
+}
+
+// tap/click toggles the menu (hover-to-open is handled in CSS)
+chapterSelect.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const open = chapterEl.classList.toggle('open');
+  chapterSelect.setAttribute('aria-expanded', open ? 'true' : 'false');
+});
+chapterMenu.querySelectorAll('[data-club]').forEach(li => {
+  li.addEventListener('click', (e) => {
+    e.stopPropagation();
+    applyClub(li.dataset.club);
+    chapterEl.classList.remove('open');
+    chapterSelect.setAttribute('aria-expanded', 'false');
+  });
+});
+document.addEventListener('click', () => {
+  chapterEl.classList.remove('open');
+  chapterSelect.setAttribute('aria-expanded', 'false');
+});
+
+/* ---------------- BACKGROUND MUSIC ---------------- */
+const audio    = document.getElementById('bgAudio');
+const musicBtn = document.getElementById('music');
+let audioArmed = false;
+
+audio.src = CLUBS[currentClub].audio;        // default track (Tycoons Club West)
+audio.dataset.track = CLUBS[currentClub].audio;
+
+function tryPlayAudio(){ const p = audio.play(); if (p) p.catch(() => {}); }
+
+// kicks off the loop when the intro ends; if the browser blocks autoplay,
+// the first user gesture (tap / click / key) starts it instead
+function startBackgroundAudio(){
+  tryPlayAudio();
+  if (!audioArmed){
+    audioArmed = true;
+    const armOnce = () => {
+      tryPlayAudio();
+      document.removeEventListener('pointerdown', armOnce);
+      document.removeEventListener('keydown', armOnce);
+    };
+    document.addEventListener('pointerdown', armOnce);
+    document.addEventListener('keydown', armOnce);
+  }
+}
+
+function syncMusicIcon(){
+  musicBtn.classList.toggle('muted', audio.muted);
+  musicBtn.setAttribute('aria-pressed', audio.muted ? 'true' : 'false');
+  const label = audio.muted ? 'Unmute music' : 'Mute music';
+  musicBtn.setAttribute('aria-label', label);
+  musicBtn.title = label;
+}
+
+// the icon only toggles mute — the track keeps looping underneath
+musicBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (audio.paused) tryPlayAudio();          // ensure it's running
+  audio.muted = !audio.muted;
+  syncMusicIcon();
+});
 
 run();
 </script>
