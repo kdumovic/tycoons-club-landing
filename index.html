@@ -427,36 +427,36 @@
 /* name/era are reference labels only — they are NOT displayed (nameless reel).
    They tell you which slot is whom when you drop in each portrait. */
 const ROSTER = [
-  { name:"Andrew Carnegie",     era:"1835", img:"images/Andrew-Carnegie.png" },
-  { name:"John D. Rockefeller", era:"1839", img:"images/JohnD-Rockefeller.png" },
-  { name:"Henry Ford",          era:"1863", img:"images/Henry-Ford.png" },
-  { name:"J. Paul Getty",       era:"1892", img:"images/JPaul-Getty.png" },
-  { name:"Walt Disney",         era:"1901", img:"images/Walt-Disney.png" },
-  { name:"Estée Lauder",        era:"1908", img:"images/Estee-Lauder.png" },
-  { name:"Warren Buffett",      era:"1930", img:"images/Warren-Buffett.png" },
-  { name:"Carlos Slim",         era:"1940", img:"images/Carlos-Slim.png" },
-  { name:"Martha Stewart",      era:"1941", img:"images/Martha-Stewart.png" },
-  { name:"Donald Trump",        era:"1946", img:"images/Donald-Trump.png" },
-  { name:"Bernard Arnault",     era:"1949", img:"images/Bernard-Arnault.png" },
-  { name:"Oprah Winfrey",       era:"1954", img:"images/Oprah-Winfrey.png" },
-  { name:"Steve Jobs",          era:"1955", img:"images/Steve-Jobs.png" },
-  { name:"Mukesh Ambani",       era:"1957", img:"images/Mukesh-Ambani.png" },
-  { name:"Jeff Bezos",          era:"1964", img:"images/Jeff-Bezos.png" },
-  { name:"Roman Abramovich",    era:"1966", img:"images/Roman-Abramovich.png" },
-  { name:"Kim Kardashian",      era:"1980", img:"images/Kim-Kardashian.png" },
-  { name:"Elon Musk",           era:"1981", img:"images/Elon-Musk.png" }
+  { name:"Andrew Carnegie",     era:"1835", img:"images/Andrew-Carnegie.webp" },
+  { name:"John D. Rockefeller", era:"1839", img:"images/JohnD-Rockefeller.webp" },
+  { name:"Henry Ford",          era:"1863", img:"images/Henry-Ford.webp" },
+  { name:"J. Paul Getty",       era:"1892", img:"images/JPaul-Getty.webp" },
+  { name:"Walt Disney",         era:"1901", img:"images/Walt-Disney.webp" },
+  { name:"Estée Lauder",        era:"1908", img:"images/Estee-Lauder.webp" },
+  { name:"Warren Buffett",      era:"1930", img:"images/Warren-Buffett.webp" },
+  { name:"Carlos Slim",         era:"1940", img:"images/Carlos-Slim.webp" },
+  { name:"Martha Stewart",      era:"1941", img:"images/Martha-Stewart.webp" },
+  { name:"Donald Trump",        era:"1946", img:"images/Donald-Trump.webp" },
+  { name:"Bernard Arnault",     era:"1949", img:"images/Bernard-Arnault.webp" },
+  { name:"Oprah Winfrey",       era:"1954", img:"images/Oprah-Winfrey.webp" },
+  { name:"Steve Jobs",          era:"1955", img:"images/Steve-Jobs.webp" },
+  { name:"Mukesh Ambani",       era:"1957", img:"images/Mukesh-Ambani.webp" },
+  { name:"Jeff Bezos",          era:"1964", img:"images/Jeff-Bezos.webp" },
+  { name:"Roman Abramovich",    era:"1966", img:"images/Roman-Abramovich.webp" },
+  { name:"Kim Kardashian",      era:"1980", img:"images/Kim-Kardashian.webp" },
+  { name:"Elon Musk",           era:"1981", img:"images/Elon-Musk.webp" }
 ];
 /* The payoff frame: Kyle Dumovic, Mat Devine, Francesca Bassa, Sam Kushell.
    Give it a single composite, or extend buildFrame() to lay out 4 headshots. */
-const FOUNDERS = { name:"The Founders", era:"Tycoons Club West", img:"images/tycoons-west.png", founders:true };
+const FOUNDERS = { name:"The Founders", era:"Tycoons Club West", img:"images/tycoons-west.webp", founders:true };
 
 /* =========================================================================
    CHAPTERS — each option swaps the background image plus the corner labels.
    Add more entries here and a matching <li> in #chapterMenu to grow the list.
    ========================================================================= */
 const CLUBS = {
-  west:      { label:"No. 002 — West", status:"Official Chapter", region:"Sawtelle · West L.A.",  coords:"34.03° N · 118.45° W", est:"Est. 2025", mailto:"mailto:membership@tycoons.club?subject=Tycoons%20Club%20West%20Membership%20Inquiry", bg:"images/tycoons-west.png",      audio:"audio/rainy-afternoon-chords.mp3", fillTop:"#161616", fillBot:"#242424" },
-  hollywood: { label:"No. 001 — East", status:"Closed Chapter",   region:"Hollywood · East L.A.", coords:"34.10° N · 118.32° W", est:"Est. 2020", mailto:"mailto:membership@tycoons.club?subject=Tycoons%20Club%20East%20Membership%20Inquiry", bg:"images/tycoons-hollywood.png", audio:"audio/nocturnal-windowpane.mp3", fillTop:"#191919", fillBot:"#020101" }
+  west:      { label:"No. 002 — West", status:"Official Chapter", region:"Sawtelle · West L.A.",  coords:"34.03° N · 118.45° W", est:"Est. 2025", mailto:"mailto:membership@tycoons.club?subject=Tycoons%20Club%20West%20Membership%20Inquiry", bg:"images/tycoons-west.webp",      audio:"audio/rainy-afternoon-chords.mp3", fillTop:"#161616", fillBot:"#242424" },
+  hollywood: { label:"No. 001 — East", status:"Closed Chapter",   region:"Hollywood · East L.A.", coords:"34.10° N · 118.32° W", est:"Est. 2020", mailto:"mailto:membership@tycoons.club?subject=Tycoons%20Club%20East%20Membership%20Inquiry", bg:"images/tycoons-hollywood.webp", audio:"audio/nocturnal-windowpane.mp3", fillTop:"#191919", fillBot:"#020101" }
 };
 let currentClub = 'west';
 FOUNDERS.img = CLUBS[currentClub].bg;
@@ -766,7 +766,26 @@ document.addEventListener('mousedown', () => {
 });
 cursorInner.addEventListener('animationend', () => cursorInner.classList.remove('swap'));
 
-run();
+/* ---------------- START (after images are ready) ----------------
+   The reel holds the first portrait the longest, so on a slow mobile connection
+   it could appear before it finished downloading (a half-black frame). Warm-load
+   every portrait up front and don't start until the first one is fully decoded
+   (with a safety timeout); the rest stream in during the long early gaps. */
+function startReel(){
+  let started = false;
+  const go = () => { if (started) return; started = true; run(); };
+
+  // begin fetching every portrait + the active background immediately
+  ROSTER.forEach(r => { const im = new Image(); im.src = r.img; });
+  const bgWarm = new Image(); bgWarm.src = CLUBS[currentClub].bg;
+
+  // gate the start on the first portrait being decoded (or 6s, whichever first)
+  const first = new Image();
+  first.src = ROSTER[0].img;
+  (first.decode ? first.decode() : Promise.reject()).then(go, go);
+  setTimeout(go, 6000);
+}
+startReel();
 </script>
 </body>
 </html>
