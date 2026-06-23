@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tycoons Club</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Barlow+Semi+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#060605;
+    --ink:#0c0b09;
+    --paper:#f1ede4;        /* aged off-white */
+    --paper-dim:#a9a399;
+    --gold:#b0894f;         /* antique gold accent */
+    --gold-dim:#6e5a36;
+    --hair:rgba(176,137,79,.32);
+
+    /* ---- ANIMATION TUNING (edit these to change the feel) ---- */
+    --start-gap:1150;       /* ms between the first (oldest) portraits */
+    --end-gap:115;          /* ms between the last (newest) portraits   */
+    --accel-curve:2.4;      /* >1 = stays slow longer then snaps fast   */
+    --founders-fade:1500;   /* ms for the founders frame to bloom in    */
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--void);
+    color:var(--paper);
+    font-family:'Cormorant',Georgia,serif;
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------------- STAGE ---------------- */
+  .stage{position:fixed;inset:0;}
+
+  /* portrait layer — each frame is absolutely stacked and cross-fades */
+  .reel{position:absolute;inset:0;}
+  .frame{
+    position:absolute;inset:0;
+    opacity:0;
+    transition:opacity 220ms ease;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .frame.show{opacity:1;}
+  .frame img{
+    width:100%;height:100%;object-fit:cover;
+    /* force every dropped image into cohesive black & white */
+    filter:grayscale(1) contrast(1.06) brightness(.92);
+  }
+
+  /* placeholder portrait (used until you drop in real images) */
+  .ph{width:100%;height:100%;position:relative;background:#111;}
+  .ph svg{width:100%;height:100%;display:block;}
+  .ph .tag{
+    position:absolute;left:50%;bottom:10%;transform:translateX(-50%);
+    font-family:'Barlow Semi Condensed',sans-serif;
+    text-transform:uppercase;letter-spacing:.34em;
+    font-size:clamp(11px,1.4vw,15px);color:var(--paper-dim);
+    text-align:center;white-space:nowrap;
+  }
+  .ph .tag b{color:var(--gold);font-weight:600;letter-spacing:.4em;}
+
+  /* cinematic finish over the whole reel */
+  .vignette{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(120% 90% at 50% 42%,transparent 38%,rgba(0,0,0,.55) 88%,rgba(0,0,0,.9) 100%);}
+  .grain{position:absolute;inset:-50%;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+
+  /* ---------------- LANDING CHROME (fades in after founders) ---------------- */
+  .chrome{position:absolute;inset:0;pointer-events:none;
+    opacity:0;transition:opacity 1600ms ease;}
+  .chrome.in{opacity:1;}
+  .chrome a,.chrome button{pointer-events:auto;}
+
+  .crest{
+    position:absolute;top:max(28px,4vh);left:50%;transform:translateX(-50%);
+    width:clamp(64px,8vw,104px);height:auto;color:var(--gold);
+    filter:drop-shadow(0 2px 14px rgba(0,0,0,.6));
+  }
+
+  .wordmark{
+    position:absolute;left:50%;bottom:13%;transform:translateX(-50%);
+    text-align:center;width:100%;
+  }
+  .wordmark h1{
+    display:inline-flex;flex-direction:column;align-items:center;
+    gap:.16em;font-weight:500;line-height:.9;
+  }
+  .wordmark .the,.wordmark .club{
+    font-family:'Barlow Semi Condensed',sans-serif;
+    text-transform:uppercase;letter-spacing:.52em;text-indent:.52em;
+    font-size:clamp(12px,1.8vw,20px);color:var(--gold);
+  }
+  .wordmark .big{
+    font-family:'Cormorant',serif;text-transform:uppercase;font-weight:500;
+    letter-spacing:.06em;font-size:clamp(40px,9vw,120px);color:var(--paper);
+    text-shadow:0 2px 30px rgba(0,0,0,.7);
+  }
+
+  /* corner survey marks */
+  .mark{
+    position:absolute;font-family:'Barlow Semi Condensed',sans-serif;
+    text-transform:uppercase;letter-spacing:.26em;
+    font-size:clamp(10px,1.2vw,13px);color:var(--paper-dim);
+  }
+  .mark.tl{top:max(26px,3.4vh);left:max(26px,3vw);}
+  .mark.tr{top:max(26px,3.4vh);right:max(26px,3vw);text-align:right;}
+  .mark.bl{bottom:max(26px,3.4vh);left:max(26px,3vw);}
+  .mark .co{color:var(--gold);display:block;margin-top:.3em;letter-spacing:.2em;}
+
+  /* membership easter-egg + CTA, bottom-right */
+  .enter{
+    position:absolute;bottom:max(26px,3.4vh);right:max(26px,3vw);
+    text-align:right;
+  }
+  .enter .member{
+    font-family:'Barlow Semi Condensed',sans-serif;text-transform:uppercase;
+    letter-spacing:.3em;font-size:clamp(10px,1.2vw,12px);color:var(--gold);
+    margin-bottom:.55em;opacity:.85;
+  }
+  .enter a{
+    font-family:'Cormorant',serif;font-style:italic;font-size:clamp(17px,2.3vw,24px);
+    color:var(--paper);text-decoration:none;border-bottom:1px solid var(--hair);
+    padding-bottom:2px;transition:border-color .3s,color .3s;
+  }
+  .enter a:hover,.enter a:focus-visible{color:var(--gold);border-color:var(--gold);outline:none;}
+
+  /* skip / replay controls */
+  .ctrl{position:absolute;z-index:5;font-family:'Barlow Semi Condensed',sans-serif;
+    text-transform:uppercase;letter-spacing:.22em;font-size:11px;
+    color:var(--paper-dim);background:none;border:none;cursor:pointer;
+    transition:color .25s;}
+  .ctrl:hover{color:var(--gold);}
+  #skip{top:max(24px,3vh);right:max(24px,3vw);opacity:.5;}
+  #skip.gone{display:none;}
+  #replay{bottom:max(24px,3vh);left:50%;transform:translateX(-50%);
+    opacity:0;transition:opacity .6s;pointer-events:none;}
+  #replay.in{opacity:.55;pointer-events:auto;}
+
+  @media (prefers-reduced-motion:reduce){
+    .frame{transition:none;}
+  }
+</style>
+</head>
+<body>
+  <main class="stage" aria-label="Tycoons Club">
+    <div class="reel" id="reel" aria-hidden="true"></div>
+    <div class="vignette"></div>
+    <div class="grain"></div>
+
+    <button id="skip" class="ctrl" aria-label="Skip intro">Skip</button>
+    <button id="replay" class="ctrl" aria-label="Replay intro">↻ Replay</button>
+
+    <div class="chrome" id="chrome">
+      <!-- The Tycoons Club crest: domed tower + diagonal black/green shield + TC monogram -->
+      <svg class="crest" viewBox="0 0 100 132" fill="none" aria-label="The Tycoons Club crest">
+        <defs>
+          <clipPath id="shield">
+            <path d="M20 46 Q50 41 80 46 V74 C80 96 66 110 50 121 C34 110 20 96 20 74 Z"/>
+          </clipPath>
+        </defs>
+
+        <!-- two-tone diagonal fill (black above, brand green below) -->
+        <g clip-path="url(#shield)">
+          <rect x="0" y="0" width="100" height="132" fill="#15130e"/>
+          <polygon points="18,64 82,86 82,132 18,132" fill="#0a7e04"/>
+        </g>
+
+        <!-- TC monogram straddling the divide -->
+        <text x="50" y="93" text-anchor="middle" fill="#f1ede4" stroke="none"
+              font-family="Cormorant,serif" font-style="italic" font-weight="500"
+              font-size="46" letter-spacing="-3">TC</text>
+
+        <!-- shield outline -->
+        <path d="M20 46 Q50 41 80 46 V74 C80 96 66 110 50 121 C34 110 20 96 20 74 Z"
+              stroke="currentColor" stroke-width="2.2"/>
+
+        <!-- cupola / domed tower -->
+        <g stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M40 46 H60 M41.5 42 H58.5"/>
+          <path d="M43 38 V42 M50 38 V42 M57 38 V42"/>
+          <rect x="43" y="30" width="14" height="8"/>
+          <path d="M47 30 V38 M53 30 V38"/>
+          <path d="M43 30 C38 23 41 14 50 11.5 C59 14 62 23 57 30 Z" fill="#15130e"/>
+          <path d="M50 11.5 V6.5"/>
+          <circle cx="50" cy="5" r="1.7" fill="currentColor"/>
+        </g>
+
+        <!-- scroll shoulders flanking the tower -->
+        <g stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M40 47 C31 43 25 45 21 52 C21 48 24 47 27 48"/>
+          <path d="M60 47 C69 43 75 45 79 52 C79 48 76 47 73 48"/>
+        </g>
+      </svg>
+
+      <div class="mark tl">Official Chapter<span class="co">No. 001 — West</span></div>
+      <div class="mark tr">Sawtelle · West L.A.<span class="co">34.03° N · 118.45° W</span></div>
+      <div class="mark bl">Est. MMXXV<span class="co">Whiskey · Music · Talk</span></div>
+
+      <div class="enter">
+        <div class="member">Membership confirmed</div>
+        <a href="#" id="cta">Find out more</a>
+      </div>
+
+      <div class="wordmark">
+        <h1><span class="the">The</span><span class="big">Tycoons</span><span class="club">Club</span></h1>
+      </div>
+    </div>
+  </main>
+
+<script>
+/* =========================================================================
+   THE ROSTER  — oldest first; the reel accelerates as it moves toward today.
+   Replace `img` with a URL/path to a real black-and-white portrait.
+   Leave img:null to use the built-in placeholder portrait.
+   The final FOUNDERS entry is the payoff frame and holds at the end.
+   ========================================================================= */
+/* name/era are reference labels only — they are NOT displayed (nameless reel).
+   They tell you which slot is whom when you drop in each portrait. */
+const ROSTER = [
+  { name:"Andrew Carnegie",     era:"1835", img:"images/Andrew-Carnegie.png" },
+  { name:"John D. Rockefeller", era:"1839", img:"images/John-Rockefeller.png" },
+  { name:"Henry Ford",          era:"1863", img:"images/Henry-Ford.png" },
+  { name:"J. Paul Getty",       era:"1892", img:"images/JPaul-Getty.png" },
+  { name:"Walt Disney",         era:"1901", img:"images/Walt-Disney.png" },
+  { name:"Estée Lauder",        era:"1908", img:"images/Estee-Lauder.png" },
+  { name:"Warren Buffett",      era:"1930", img:"images/Warren-Buffett.png" },
+  { name:"Carlos Slim",         era:"1940", img:"images/Carlos-Slim.png" },
+  { name:"Martha Stewart",      era:"1941", img:"images/Martha-Stewart.png" },
+  { name:"Donald Trump",        era:"1946", img:"images/Donald-Trump.png" },
+  { name:"Bernard Arnault",     era:"1949", img:"images/Bernard-Arnault.png" },
+  { name:"Oprah Winfrey",       era:"1954", img:"images/Oprah-Winfrey.png" },
+  { name:"Steve Jobs",          era:"1955", img:"images/Steve-Jobs.png" },
+  { name:"Mukesh Ambani",       era:"1957", img:"images/Mukesh-Ambani.png" },
+  { name:"Jeff Bezos",          era:"1964", img:"images/Jeff-Bezos.png" },
+  { name:"Roman Abramovich",    era:"1966", img:"images/Roman-Abramovich.png" },
+  { name:"Elon Musk",           era:"1971", img:"images/Elon-Musk.png" },
+  { name:"Kim Kardashian",      era:"1980", img:"images/Kim-Kardashian.png" }
+];
+/* The payoff frame: Kyle, Matt Devine, Francesca Bassa, Sam Kushel.
+   Give it a single composite, or extend buildFrame() to lay out 4 headshots. */
+const FOUNDERS = { name:"The Founders", era:"Tycoons Club West", img:"images/current-tycoons.png", founders:true };
+
+/* a few silhouette shapes so the placeholders read as distinct portraits */
+const SILHOUETTES = [
+  "M50 24c12 0 21 11 21 25 0 10-4 17-9 21 14 4 27 16 31 34H7c4-18 17-30 31-34-5-4-9-11-9-21 0-14 9-25 21-25Z",
+  "M50 22c13 0 22 12 22 27 0 9-4 16-9 20 16 5 28 18 32 35H5c4-17 16-30 32-35-5-4-9-11-9-20 0-15 9-27 22-27Z",
+  "M50 26c11 0 20 10 20 23 0 11-5 19-11 22 13 5 25 17 28 33H13c3-16 15-28 28-33-6-3-11-11-11-22 0-13 9-23 20-23Z",
+];
+
+const reel = document.getElementById('reel');
+const chrome = document.getElementById('chrome');
+const skipBtn = document.getElementById('skip');
+const replayBtn = document.getElementById('replay');
+const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function cssNum(v){ return parseFloat(getComputedStyle(document.documentElement).getPropertyValue(v)); }
+
+function placeholderHTML(entry, i){
+  const sil = SILHOUETTES[i % SILHOUETTES.length];
+  const sils = entry.founders
+    ? [12,37,62,87].map(x=>`<g transform="translate(${x-50},6) scale(.92)"><path d="${SILHOUETTES[(x)%3]}" fill="#cfc9bd"/></g>`).join('')
+    : `<path d="${sil}" fill="#d6d0c4"/>`;
+  return `
+    <div class="ph">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
+        <defs><radialGradient id="g${i}" cx="50%" cy="38%" r="70%">
+          <stop offset="0%" stop-color="#2a2a28"/><stop offset="100%" stop-color="#0e0e0d"/>
+        </radialGradient></defs>
+        <rect width="100" height="100" fill="url(#g${i})"/>
+        ${sils}
+      </svg>
+    </div>`;
+}
+
+function buildFrame(entry, i){
+  const f = document.createElement('div');
+  f.className = 'frame';
+  if (entry.img){
+    const img = document.createElement('img');
+    img.src = entry.img; img.alt = '';
+    // if the file is missing or misnamed, fall back to the silhouette
+    img.onerror = () => { f.innerHTML = placeholderHTML(entry, i); };
+    f.appendChild(img);
+  } else {
+    f.innerHTML = placeholderHTML(entry, i);
+  }
+  reel.appendChild(f);
+  return f;
+}
+
+let frames = [], timers = [];
+function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
+
+function gapFor(progress){            // progress 0→1 across the historical roster
+  const a = cssNum('--start-gap'), b = cssNum('--end-gap'), k = cssNum('--accel-curve');
+  return a + (b - a) * Math.pow(progress, 1/k);   // long gaps first, then snaps fast
+}
+
+function run(){
+  clearTimers();
+  reel.innerHTML = '';
+  chrome.classList.remove('in');
+  replayBtn.classList.remove('in');
+  skipBtn.classList.remove('gone');
+
+  frames = ROSTER.map(buildFrame);
+  const foundersFrame = buildFrame(FOUNDERS, 99);
+
+  if (reduce){                        // reduced motion: skip straight to the payoff
+    foundersFrame.classList.add('show');
+    chrome.classList.add('in');
+    skipBtn.classList.add('gone');
+    replayBtn.classList.add('in');
+    return;
+  }
+
+  let t = 0;
+  frames.forEach((f, i) => {
+    const prog = i / (frames.length - 1);
+    timers.push(setTimeout(() => {
+      frames.forEach(x => x.classList.remove('show'));
+      f.classList.add('show');
+    }, t));
+    t += gapFor(prog);
+  });
+
+  // founders bloom in, hold, then chrome develops around them
+  const fade = cssNum('--founders-fade');
+  timers.push(setTimeout(() => {
+    frames.forEach(x => x.classList.remove('show'));
+    foundersFrame.style.transition = `opacity ${fade}ms ease`;
+    foundersFrame.classList.add('show');
+    skipBtn.classList.add('gone');
+  }, t + 120));
+
+  timers.push(setTimeout(() => {
+    chrome.classList.add('in');
+    replayBtn.classList.add('in');
+  }, t + 120 + fade * 0.7));
+}
+
+function skipToEnd(){
+  clearTimers();
+  run.reduceOnce = true;
+}
+skipBtn.addEventListener('click', () => {
+  clearTimers();
+  reel.querySelectorAll('.frame').forEach(x => x.classList.remove('show'));
+  const last = reel.lastElementChild;
+  if (last) last.classList.add('show');
+  chrome.classList.add('in');
+  skipBtn.classList.add('gone');
+  replayBtn.classList.add('in');
+});
+replayBtn.addEventListener('click', run);
+
+run();
+</script>
+</body>
+</html>
