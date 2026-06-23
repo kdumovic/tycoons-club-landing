@@ -22,6 +22,8 @@
     --end-gap:115;          /* ms between the last (newest) portraits   */
     --accel-curve:2.4;      /* >1 = stays slow longer then snaps fast   */
     --founders-fade:1500;   /* ms for the founders frame to bloom in    */
+    --fade-frac:0;          /* portrait fade length as a fraction of its gap (dip-to-black) */
+    --fade-cap:620;         /* hard cap (ms) on a single portrait fade  */
   }
 
   *{box-sizing:border-box;margin:0;padding:0;}
@@ -53,6 +55,22 @@
   }
   /* stacked layer used to cross-fade between chapter backgrounds */
   .frame img.xfade{position:absolute;inset:0;}
+
+  /* portrait caption: name + birth year, lives inside the frame so it fades with it */
+  .caption{
+    position:absolute;left:0;right:0;bottom:9%;z-index:1;
+    text-align:center;color:#fff;pointer-events:none;
+    font-family:'Cormorant',Georgia,serif;text-transform:uppercase;
+    text-shadow:0 2px 16px rgba(0,0,0,.9);
+  }
+  .caption .nm{
+    display:block;font-weight:500;line-height:1;
+    font-size:clamp(22px,3.8vw,46px);letter-spacing:.1em;
+  }
+  .caption .yr{
+    display:block;margin-top:.5em;font-weight:500;
+    font-size:clamp(12px,1.5vw,18px);letter-spacing:.42em;text-indent:.42em;
+  }
 
   /* cinematic finish over the whole reel */
   .vignette{position:absolute;inset:0;pointer-events:none;
@@ -153,16 +171,13 @@
 
   /* ---------------- MUSIC TOGGLE ---------------- */
   .music{
-    position:absolute;top:50%;right:max(20px,2.4vw);transform:translateY(-50%);
-    width:clamp(36px,4vw,44px);height:clamp(36px,4vw,44px);border-radius:50%;
-    display:flex;align-items:center;justify-content:center;
-    color:var(--paper-dim);background:rgba(10,9,8,.35);border:1px solid var(--hair);
-    cursor:pointer;transition:color .25s,border-color .25s,background .25s;
+    display:inline-flex;align-items:center;justify-content:center;
+    color:var(--paper-dim);background:none;border:none;padding:0;
+    cursor:pointer;transition:color .25s;
   }
-  .music:hover,.music:focus-visible{color:var(--gold);border-color:var(--gold);outline:none;}
-  .music svg{width:56%;height:56%;}
+  .music:hover,.music:focus-visible{color:var(--gold);outline:none;}
+  .music svg{width:14px;height:14px;display:block;}
   .music .slash{opacity:0;transition:opacity .2s;}
-  .music.muted{color:var(--paper-dim);}
   .music.muted .slash{opacity:1;}
 
   /* membership easter-egg + CTA, bottom-right */
@@ -201,9 +216,17 @@
   .ctrl:hover{color:var(--gold);}
   #skip{top:max(24px,3vh);right:max(24px,3vw);opacity:.5;}
   #skip.gone{display:none;}
-  #replay{bottom:max(24px,3vh);left:50%;transform:translateX(-50%);
-    opacity:0;transition:opacity .6s;pointer-events:none;}
-  #replay.in{opacity:.55;pointer-events:auto;}
+  #replay{position:static;transform:none;opacity:1;pointer-events:auto;
+    font-size:clamp(10px,1.2vw,13px);}
+
+  /* bottom-center control bar: REPLAY | music, aligned with the corner text */
+  .footbar{
+    position:absolute;left:50%;bottom:max(26px,3.4vh);transform:translateX(-50%);
+    display:flex;align-items:center;gap:.85em;z-index:5;
+    opacity:0;transition:opacity .6s;pointer-events:none;
+  }
+  .footbar.in{opacity:.7;pointer-events:auto;}
+  .footbar .pipe{color:var(--paper-dim);opacity:.5;font-size:13px;line-height:1;}
 
   @media (prefers-reduced-motion:reduce){
     .frame{transition:none;}
@@ -237,6 +260,32 @@
   @media (prefers-reduced-motion:reduce){
     .cursor-inner.swap{animation:none;}
   }
+
+  /* ---------------- MOBILE ---------------- */
+  @media (max-width:768px){
+    /* crest sits just below the top, centered */
+    .crest{top:max(18px,3vh);transform:translateX(-50%);}
+    /* THE TYCOONS CLUB a touch larger relative to viewport width */
+    .wordmark .big{font-size:clamp(44px,12.5vw,120px);}
+    .wordmark .the,.wordmark .club{font-size:clamp(13px,2.6vw,20px);}
+  }
+  /* portrait only: chapter/founders background becomes 60% tall, centered, with
+     its dark backdrop extended above and below so it reads seamlessly */
+  @media (max-width:768px) and (orientation:portrait){
+    .frame.founders{
+      background:linear-gradient(180deg,
+        var(--fill-top,#161616) 0 20%,
+        var(--fill-bot,#242424) 80% 100%);
+    }
+    .frame.founders img{
+      position:absolute;inset:auto;left:0;right:0;top:50%;
+      transform:translateY(-50%);width:100%;height:60%;object-fit:cover;
+    }
+  }
+  /* small phones: shorten the CTA to just "Membership" */
+  @media (max-width:600px){
+    .enter .inq{display:none;}
+  }
 </style>
 </head>
 <body>
@@ -248,7 +297,19 @@
     <audio id="bgAudio" loop preload="auto"></audio>
 
     <button id="skip" class="ctrl" aria-label="Skip intro">Skip</button>
-    <button id="replay" class="ctrl" aria-label="Replay intro">↻ Replay</button>
+
+    <div class="footbar" id="footbar">
+      <button id="replay" class="ctrl" aria-label="Replay intro">↻ Replay</button>
+      <span class="pipe" aria-hidden="true">|</span>
+      <button id="music" class="music" aria-label="Mute music" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 17V5l10-2v12"/>
+          <circle cx="6.5" cy="17.5" r="2.5"/>
+          <circle cx="16.5" cy="15.5" r="2.5"/>
+          <line class="slash" x1="3.5" y1="3.5" x2="20.5" y2="20.5"/>
+        </svg>
+      </button>
+    </div>
 
     <div class="chrome" id="chrome">
       <!-- The Tycoons Club crest: domed tower + diagonal black/green shield + TC monogram -->
@@ -307,21 +368,12 @@
       <div class="mark bl" id="estMark">Est. 2025</div>
 
       <div class="enter">
-        <a href="mailto:membership@tycoons.club?subject=Tycoons%20Club%20West%20Membership%20Inquiry" id="cta">Membership Inquiry <span class="arrow" aria-hidden="true">&rarr;</span></a>
+        <a href="mailto:membership@tycoons.club?subject=Tycoons%20Club%20West%20Membership%20Inquiry" id="cta">Membership<span class="inq"> Inquiry</span> <span class="arrow" aria-hidden="true">&rarr;</span></a>
       </div>
 
       <div class="wordmark">
         <h1><span class="the">The</span><span class="big">Tycoons</span><span class="club">Club</span></h1>
       </div>
-
-      <button id="music" class="music" aria-label="Mute music" aria-pressed="false" title="Mute music">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 17V5l10-2v12"/>
-          <circle cx="6.5" cy="17.5" r="2.5"/>
-          <circle cx="16.5" cy="15.5" r="2.5"/>
-          <line class="slash" x1="3.5" y1="3.5" x2="20.5" y2="20.5"/>
-        </svg>
-      </button>
     </div>
   </main>
 
@@ -380,8 +432,8 @@ const FOUNDERS = { name:"The Founders", era:"Tycoons Club West", img:"images/tyc
    Add more entries here and a matching <li> in #chapterMenu to grow the list.
    ========================================================================= */
 const CLUBS = {
-  west:      { label:"No. 002 — West", status:"Official Chapter", region:"Sawtelle · West L.A.",  coords:"34.03° N · 118.45° W", est:"Est. 2025", mailto:"mailto:membership@tycoons.club?subject=Tycoons%20Club%20West%20Membership%20Inquiry", bg:"images/tycoons-west.png",      audio:"audio/rainy-afternoon-chords.mp3" },
-  hollywood: { label:"No. 001 — East", status:"Closed Chapter",   region:"Hollywood · East L.A.", coords:"34.10° N · 118.32° W", est:"Est. 2020", mailto:"mailto:membership@tycoons.club?subject=Tycoons%20Club%20East%20Membership%20Inquiry", bg:"images/tycoons-hollywood.png", audio:"audio/nocturnal-windowpane.mp3" }
+  west:      { label:"No. 002 — West", status:"Official Chapter", region:"Sawtelle · West L.A.",  coords:"34.03° N · 118.45° W", est:"Est. 2025", mailto:"mailto:membership@tycoons.club?subject=Tycoons%20Club%20West%20Membership%20Inquiry", bg:"images/tycoons-west.png",      audio:"audio/rainy-afternoon-chords.mp3", fillTop:"#161616", fillBot:"#242424" },
+  hollywood: { label:"No. 001 — East", status:"Closed Chapter",   region:"Hollywood · East L.A.", coords:"34.10° N · 118.32° W", est:"Est. 2020", mailto:"mailto:membership@tycoons.club?subject=Tycoons%20Club%20East%20Membership%20Inquiry", bg:"images/tycoons-hollywood.png", audio:"audio/nocturnal-windowpane.mp3", fillTop:"#191919", fillBot:"#020101" }
 };
 let currentClub = 'west';
 FOUNDERS.img = CLUBS[currentClub].bg;
@@ -390,16 +442,24 @@ const reel = document.getElementById('reel');
 const chrome = document.getElementById('chrome');
 const skipBtn = document.getElementById('skip');
 const replayBtn = document.getElementById('replay');
+const footbar = document.getElementById('footbar');
 const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function cssNum(v){ return parseFloat(getComputedStyle(document.documentElement).getPropertyValue(v)); }
 
 function buildFrame(entry){
   const f = document.createElement('div');
-  f.className = 'frame';
+  f.className = entry.founders ? 'frame founders' : 'frame';
   const img = document.createElement('img');
   img.src = entry.img; img.alt = '';
   f.appendChild(img);
+  // name + birth year caption (skip the founders payoff frame); fades with the frame
+  if (!entry.founders){
+    const cap = document.createElement('div');
+    cap.className = 'caption';
+    cap.innerHTML = `<span class="nm">${entry.name}</span><span class="yr">${entry.era}</span>`;
+    f.appendChild(cap);
+  }
   reel.appendChild(f);
   return f;
 }
@@ -416,29 +476,51 @@ function run(){
   clearTimers();
   reel.innerHTML = '';
   chrome.classList.remove('in');
-  replayBtn.classList.remove('in');
+  footbar.classList.remove('in');
   skipBtn.classList.remove('gone');
 
   frames = ROSTER.map(buildFrame);
   foundersFrame = buildFrame(FOUNDERS);
+  setFoundersFill(currentClub);   // mobile: backdrop colors to extend above/below the image
 
   if (reduce){                        // reduced motion: skip straight to the payoff
     foundersFrame.classList.add('show');
     chrome.classList.add('in');
     skipBtn.classList.add('gone');
-    replayBtn.classList.add('in');
+    footbar.classList.add('in');
     startBackgroundAudio();
     return;
   }
 
+  // --fade-frac > 0 : each portrait fades in from black, holds, then fades back
+  //                   to black before the next begins (dip-to-black).
+  // --fade-frac = 0 : portraits cross-fade directly into one another (no black).
+  const fFrac = cssNum('--fade-frac'), fCap = cssNum('--fade-cap');
+  const crossfade = fFrac <= 0;
   let t = 0;
   frames.forEach((f, i) => {
     const prog = i / (frames.length - 1);
-    timers.push(setTimeout(() => {
-      frames.forEach(x => x.classList.remove('show'));
-      f.classList.add('show');
-    }, t));
-    t += gapFor(prog);
+    const gap = gapFor(prog);
+    const at = t;
+    if (crossfade) {
+      const crossMs = Math.min(gap * 0.5, fCap);   // overlapping dissolve, no black
+      timers.push(setTimeout(() => {
+        f.style.transition = `opacity ${crossMs}ms ease`;
+        frames.forEach(x => x.classList.remove('show'));
+        f.classList.add('show');
+      }, at));
+    } else {
+      const fadeMs = Math.min(gap * fFrac, fCap);
+      const blackHold = Math.min(gap * 0.10, 160); // brief full-black between portraits
+      timers.push(setTimeout(() => {               // fade in from black
+        f.style.transition = `opacity ${fadeMs}ms ease`;
+        f.classList.add('show');
+      }, at));
+      timers.push(setTimeout(() => {               // fade back out to black
+        f.classList.remove('show');
+      }, at + Math.max(fadeMs, gap - fadeMs - blackHold)));
+    }
+    t += gap;
   });
 
   // founders bloom in, hold, then chrome develops around them
@@ -452,7 +534,7 @@ function run(){
 
   timers.push(setTimeout(() => {
     chrome.classList.add('in');
-    replayBtn.classList.add('in');
+    footbar.classList.add('in');
     startBackgroundAudio();
   }, t + 120 + fade * 0.7));
 }
@@ -468,7 +550,7 @@ function jumpToEnd(){
   if (last) last.classList.add('show');
   chrome.classList.add('in');
   skipBtn.classList.add('gone');
-  replayBtn.classList.add('in');
+  footbar.classList.add('in');
   startBackgroundAudio();
 }
 skipBtn.addEventListener('click', jumpToEnd);
@@ -534,6 +616,15 @@ function fadeText(el, text){
   fadeSwap(el, () => { el.textContent = text; });
 }
 
+// mobile: set the backdrop colors that extend above/below the 60%-height image
+function setFoundersFill(key){
+  const c = CLUBS[key];
+  if (foundersFrame && c){
+    foundersFrame.style.setProperty('--fill-top', c.fillTop);
+    foundersFrame.style.setProperty('--fill-bot', c.fillBot);
+  }
+}
+
 function applyClub(key){
   const c = CLUBS[key];
   if (!c) return;
@@ -542,6 +633,7 @@ function applyClub(key){
 
   // cross-fade the live background (the held founders frame), if it exists yet
   if (foundersFrame) crossfadeBg(foundersFrame, c.bg);
+  setFoundersFill(key);
 
   // swap the looping soundtrack for this chapter (keeps playing + mute state)
   if (audio && c.audio && audio.dataset.track !== c.audio){
@@ -613,9 +705,8 @@ function startBackgroundAudio(){
 function syncMusicIcon(){
   musicBtn.classList.toggle('muted', audio.muted);
   musicBtn.setAttribute('aria-pressed', audio.muted ? 'true' : 'false');
-  const label = audio.muted ? 'Unmute music' : 'Mute music';
-  musicBtn.setAttribute('aria-label', label);
-  musicBtn.title = label;
+  // note: no title attribute — mutating it on hover makes the browser flash the native cursor
+  musicBtn.setAttribute('aria-label', audio.muted ? 'Unmute music' : 'Mute music');
 }
 
 // the icon only toggles mute — the track keeps looping underneath
